@@ -1,26 +1,10 @@
 // background.ts
-const createOffscreenDocument = async () => {
-  const contexts = await chrome.runtime.getContexts({
-    contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT]
-  })
-
-  if (contexts.length === 0) {
-    console.log("Creating offscreen document...")
-    await chrome.offscreen.createDocument({
-      url: "tabs/offscreen.html",
-      reasons: [chrome.offscreen.Reason.BLOBS],
-      justification: "To create Blob URLs for downloads"
-    })
-  }
-}
 
 export const downloadM3U8AsMP4 = async (
   m3u8Url: string,
   filename: string = "video.mp4"
 ) => {
   try {
-    await createOffscreenDocument()
-
     // Message the offscreen document to perform the download
     chrome.runtime.sendMessage({
       target: "offscreen",

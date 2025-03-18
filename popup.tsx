@@ -41,6 +41,8 @@ function IndexPopup() {
     }
   }, [])
 
+  console.log(imageUrls, videoUrls, "asdfasdfasdfasdf")
+
   const handleScrapeImages = async () => {
     setLoading(true)
     setError(null)
@@ -98,15 +100,23 @@ function IndexPopup() {
   }
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-xl w-[620px]">
-      <h1 className="text-2xl font-semibold text-gray-800 text-center mb-6">
-        Amazon Media Scraper
+    <div className="p-4 bg-white rounded-lg shadow-lg w-[620px] border border-gray-200">
+      <h1 className="text-2xl font-semibold text-gray-800 text-center mb-6 mt-2">
+        🛒 Amazon Media Scraper
       </h1>
 
-      <button
+      {/* <button
         onClick={handleScrapeImages}
         disabled={loading || convertingVideo !== null}
         className="w-full bg-[#f0c14b] text-[#111] font-bold py-2 rounded-lg hover:bg-[#ddb347] transition disabled:opacity-50">
+        {loading ? "Scraping..." : "Scrape Product Media"}
+      </button> */}
+      <button
+        onClick={handleScrapeImages}
+        disabled={loading || convertingVideo !== null}
+        className="w-full py-2 rounded-lg font-bold text-[#111] transition disabled:opacity-50
+                   bg-gradient-to-r from-[#f0c14b] to-[#ff9900]
+                   hover:bg-gradient-to-r hover:from-[#e6b93e] hover:to-[#ff8c00]">
         {loading ? "Scraping..." : "Scrape Product Media"}
       </button>
 
@@ -116,52 +126,74 @@ function IndexPopup() {
         </div>
       )}
 
-      <div className="mt-6 flex gap-6">
-        <div className="flex-1 max-h-80 overflow-y-auto border rounded-lg p-4 bg-gray-50">
-          <h2 className="text-lg font-medium mb-4">Images</h2>
-          {imageUrls.length > 0 ? (
-            imageUrls.map((url, index) => (
-              <div key={index} className="mb-4">
-                <img
-                  src={url}
-                  alt={`Amazon Image ${index + 1}`}
-                  className="w-full rounded-lg mb-2"
-                />
-                <button
-                  onClick={() => downloadImage(url, index)}
-                  className="w-full py-2 bg-[#f0c14b] text-[#111] font-medium rounded-lg">
-                  Download Image
-                </button>
-              </div>
-            ))
-          ) : (
-            <p className="text-gray-500">No product images found.</p>
-          )}
+      <div className="mt-4 flex gap-6">
+        {/* Image Container */}
+        <div className="flex-1 max-h-80 overflow-y-auto border rounded-lg pt-0 bg-gray-50 shadow-inner">
+          <p className="text-lg font-medium mb-4 sticky top-0 px-4 py-2 bg-white backdrop-blur-md bg-opacity-75 border-b rounded-t-lg">
+            🖼️ Images
+          </p>
+          <div className="grid grid-cols-2 gap-4 px-4">
+            {imageUrls.length > 0 ? (
+              imageUrls.map((url, index) => (
+                <div
+                  key={index}
+                  className="flex flex-col items-center mb-4 p-3 rounded-lg bg-white shadow hover:shadow-md transition">
+                  <img
+                    src={url}
+                    alt={`Amazon Image ${index + 1}`}
+                    className="w-32 h-32 object-cover rounded-lg border border-gray-200 mb-2"
+                  />
+                  <button
+                    onClick={() => downloadImage(url, index)}
+                    className="w-full py-2 bg-[#f0c14b] text-[#111] font-medium rounded-lg hover:bg-[#ddb347] transition">
+                    Download
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 col-span-2 text-center">
+                No product images found.
+              </p>
+            )}
+          </div>
         </div>
 
-        <div className="flex-1 max-h-80 overflow-y-auto border rounded-lg p-4 bg-gray-50">
-          <h2 className="text-lg font-medium mb-4">Videos</h2>
-          {videoUrls.length > 0 ? (
-            videoUrls.map((item, index) => (
-              <div key={index} className="mb-4">
-                <img
-                  src={item.thumbnail}
-                  alt="Video Thumbnail"
-                  className="w-full rounded-lg mb-2"
-                />
-                <button
-                  onClick={() => downloadVideo(item.url)}
-                  disabled={convertingVideo === item.url}
-                  className={`w-full py-2 rounded-lg font-medium ${convertingVideo === item.url ? "bg-gray-400" : "bg-[#f0c14b] text-[#111]"}`}>
-                  {convertingVideo === item.url
-                    ? "Converting..."
-                    : "Download Video"}
-                </button>
-              </div>
-            ))
-          ) : (
-            <p className="text-gray-500">No product videos found.</p>
-          )}
+        {/* Video Container */}
+        <div className="flex-1 max-h-80 overflow-y-auto border rounded-lg bg-gray-50 shadow-inner">
+          <p className="text-lg font-medium mb-4 sticky top-0 px-4 py-2 bg-white backdrop-blur-md bg-opacity-75 border-b rounded-t-lg">
+            🎬 Videos
+          </p>
+          <div className="grid grid-cols-2 gap-4 px-4">
+            {videoUrls.length > 0 ? (
+              videoUrls.map((item, index) => (
+                <div
+                  key={index}
+                  className="flex flex-col items-center mb-4 p-3 rounded-lg bg-white shadow hover:shadow-md transition">
+                  <img
+                    src={item.thumbnail}
+                    alt="Video Thumbnail"
+                    className="w-32 h-32 object-cover rounded-lg border border-gray-200 mb-2"
+                  />
+                  <button
+                    onClick={() => downloadVideo(item.url)}
+                    disabled={convertingVideo === item.url}
+                    className={`w-full py-2 rounded-lg font-medium transition ${
+                      convertingVideo === item.url
+                        ? "bg-gray-400 text-white"
+                        : "bg-[#f0c14b] text-[#111] hover:bg-[#ddb347]"
+                    }`}>
+                    {convertingVideo === item.url
+                      ? "Converting..."
+                      : "Download"}
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 col-span-2 text-center">
+                No product videos found.
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -5,6 +5,21 @@ import { downloadM3U8AsMP4 } from "~utils"
 //   chrome.tabs.sendMessage(tab.id, { action: "scrapeImages" })
 // })
 
+const createOffscreenDocument = async () => {
+  const contexts = await chrome.runtime.getContexts({
+    contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT]
+  })
+
+  if (contexts.length === 0) {
+    console.log("Creating offscreen document...")
+    await chrome.offscreen.createDocument({
+      url: "tabs/offscreen.html",
+      reasons: [chrome.offscreen.Reason.BLOBS],
+      justification: "To create Blob URLs for downloads"
+    })
+  }
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // if (message.action === "triggerDownload") {
   //   const { url, filename } = message
@@ -68,3 +83,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   return
 })
+
+try {
+  createOffscreenDocument()
+} catch (error) {
+  console.error("Error creating offscreen document:", error)
+}
