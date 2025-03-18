@@ -1,200 +1,171 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react"
+
+import "./style.css"
 
 function IndexPopup() {
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [videoUrls, setVideoUrls] = useState<{ url: string; thumbnail: string }[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [convertingVideo, setConvertingVideo] = useState<string | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>([])
+  const [videoUrls, setVideoUrls] = useState<
+    { url: string; thumbnail: string }[]
+  >([])
+  const [loading, setLoading] = useState<boolean>(false)
+  const [error, setError] = useState<string | null>(null)
+  const [convertingVideo, setConvertingVideo] = useState<string | null>(null)
 
   useEffect(() => {
-    // Listen for scraped data from content script
     chrome.runtime.onMessage.addListener((message) => {
       if (message.action === "scrapedData") {
-        console.log("Received Scraped Data:", message);
-
-        if (message.images) {
-          setImageUrls(message.images);
-        }
-        if (message.videos) {
-          setVideoUrls(message.videos);
-        }
-        setLoading(false);
+        if (message.images) setImageUrls(message.images)
+        if (message.videos) setVideoUrls(message.videos)
+        setLoading(false)
       }
 
-      // Listen for conversion progress
-      if (message.action === "conversionProgress") {
-        console.log(`Conversion Progress for ${message.url}: ${message.progress}%`);
-      }
+      if (message.action === "conversionProgress")
+        console.log(
+          `Conversion Progress for ${message.url}: ${message.progress}%`
+        )
 
-      // Listen for conversion errors
       if (message.action === "conversionError") {
-        console.error(`Conversion failed for ${message.url}: ${message.error}`);
-        setError(`Conversion failed for ${message.url}: ${message.error}`);
-        setConvertingVideo(null);
+        setError(`Conversion failed for ${message.url}: ${message.error}`)
+        setConvertingVideo(null)
       }
 
-      // Listen for successful conversion
-      if (message.action === "conversionComplete") {
-        console.log(`Conversion complete for ${message.url}`);
-        setConvertingVideo(null);
-      }
-    });
-  }, []);
+      if (message.action === "conversionComplete") setConvertingVideo(null)
+    })
+  }, [])
+
+  useEffect(() => {
+    try {
+      handleScrapeImages()
+    } catch (err) {
+      console.log(err)
+    }
+  }, [])
 
   const handleScrapeImages = async () => {
-    setLoading(true);
-    setError(null);
-    setImageUrls([]);
-    setVideoUrls([]);
+    setLoading(true)
+    setError(null)
+    setImageUrls([])
+    setVideoUrls([])
 
     try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-
-      if (tab.id) {
-        console.log("Sending message to content script to scrape images...");
-        chrome.tabs.sendMessage(tab.id, { action: "scrapeImages" });
-      } else {
-        setError("No active tab found");
-        setLoading(false);
-      }
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true
+      })
+      if (tab?.id) chrome.tabs.sendMessage(tab.id, { action: "scrapeImages" })
+      else setError("No active tab found")
     } catch (error) {
-      console.error("Error scraping content:", error);
-      setError("Failed to scrape content: " + (error instanceof Error ? error.message : String(error)));
-      setLoading(false);
+      setError(
+        "Failed to scrape content: " +
+          (error instanceof Error ? error.message : String(error))
+      )
+      setLoading(false)
     }
-  };
+  }
 
   const downloadImage = (url: string, index: number) => {
-    console.log(`Downloading image: ${url}`);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `amazon_image_${index + 1}.jpg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `amazon_image_${index + 1}.jpg`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
 
   const downloadVideo = async (url: string) => {
-    console.log(`Starting conversion for video: ${url}`);
-    setConvertingVideo(url);
-    setError(null);
+    setConvertingVideo(url)
+    setError(null)
 
     try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-
-      if (tab.id) {
-        console.log(`Sending message to content script to convert video: ${url}`);
-        chrome.tabs.sendMessage(tab.id, { 
-          action: "convertHLS", 
-          url: url 
-        });
-      } else {
-        console.error("No active tab found");
-        setError("No active tab found");
-        setConvertingVideo(null);
-      }
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true
+      })
+      if (tab?.id)
+        chrome.runtime.sendMessage({
+          action: "triggerM3U8Download",
+          url,
+          filename: "converted_video.mp4"
+        })
+      else setError("No active tab found")
     } catch (error) {
-      console.error("Error downloading video:", error);
-      setError("Failed to download video: " + (error instanceof Error ? error.message : String(error)));
-      setConvertingVideo(null);
+      setError(
+        "Failed to download video: " +
+          (error instanceof Error ? error.message : String(error))
+      )
+      setConvertingVideo(null)
     }
-  };
+  }
 
   return (
-    <div style={{ width: "620px", padding: "16px", display: "flex", flexDirection: "column" }}>
-      <h1 style={{ textAlign: "center", fontSize: "18px", marginBottom: "10px" }}>Amazon Media Scraper</h1>
+    <div className="p-6 bg-white rounded-lg shadow-xl w-[620px]">
+      <h1 className="text-2xl font-semibold text-gray-800 text-center mb-6">
+        Amazon Media Scraper
+      </h1>
 
-      {/* Scrape Button */}
       <button
         onClick={handleScrapeImages}
         disabled={loading || convertingVideo !== null}
-        style={{
-          padding: "10px",
-          background: "#f0c14b",
-          border: "1px solid #a88734",
-          borderRadius: "3px",
-          cursor: loading || convertingVideo !== null ? "not-allowed" : "pointer",
-          fontSize: "16px",
-          fontWeight: "bold",
-          width: "100%",
-          marginBottom: "10px",
-        }}
-      >
+        className="w-full bg-[#f0c14b] text-[#111] font-bold py-2 rounded-lg hover:bg-[#ddb347] transition disabled:opacity-50">
         {loading ? "Scraping..." : "Scrape Product Media"}
       </button>
 
-      {/* Error Message */}
       {error && (
-        <div style={{ padding: "10px", backgroundColor: "#ffe0e0", color: "#d8000c", border: "1px solid #d8000c", borderRadius: "3px", marginBottom: "10px" }}>
+        <div className="mt-4 p-3 bg-red-100 text-red-800 border border-red-300 rounded-lg">
           {error}
         </div>
       )}
 
-      {/* Content Layout */}
-      <div style={{ display: "flex", gap: "10px", justifyContent: "center", overflow: "hidden" }}>
-        {/* Left Side - Images */}
-        <div style={{ width: "300px", maxHeight: "450px", overflowY: "auto", border: "1px solid #ddd", padding: "10px" }}>
-          <h2 style={{ fontSize: "16px", marginBottom: "5px" }}>Images</h2>
+      <div className="mt-6 flex gap-6">
+        <div className="flex-1 max-h-80 overflow-y-auto border rounded-lg p-4 bg-gray-50">
+          <h2 className="text-lg font-medium mb-4">Images</h2>
           {imageUrls.length > 0 ? (
             imageUrls.map((url, index) => (
-              <div key={index} style={{ marginBottom: "10px" }}>
-                <img src={url} alt={`Amazon Image ${index + 1}`} style={{ width: "100%", borderRadius: "5px" }} />
+              <div key={index} className="mb-4">
+                <img
+                  src={url}
+                  alt={`Amazon Image ${index + 1}`}
+                  className="w-full rounded-lg mb-2"
+                />
                 <button
                   onClick={() => downloadImage(url, index)}
-                  style={{
-                    width: "100%",
-                    padding: "5px",
-                    marginTop: "5px",
-                    background: "#f0c14b",
-                    border: "1px solid #a88734",
-                    borderRadius: "3px",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                  }}
-                >
+                  className="w-full py-2 bg-[#f0c14b] text-[#111] font-medium rounded-lg">
                   Download Image
                 </button>
               </div>
             ))
           ) : (
-            <p style={{ fontSize: "14px", color: "#666" }}>No product images found.</p>
+            <p className="text-gray-500">No product images found.</p>
           )}
         </div>
 
-        {/* Right Side - Videos */}
-        <div style={{ width: "300px", maxHeight: "450px", overflowY: "auto", border: "1px solid #ddd", padding: "10px" }}>
-          <h2 style={{ fontSize: "16px", marginBottom: "5px" }}>Videos</h2>
+        <div className="flex-1 max-h-80 overflow-y-auto border rounded-lg p-4 bg-gray-50">
+          <h2 className="text-lg font-medium mb-4">Videos</h2>
           {videoUrls.length > 0 ? (
             videoUrls.map((item, index) => (
-              <div key={index} style={{ marginBottom: "10px" }}>
-                <img src={item.thumbnail} alt="Video Thumbnail" style={{ width: "100%", borderRadius: "5px" }} />
-                {/* <video src={url} controls style={{ width: "100%", borderRadius: "5px" }} /> */}
+              <div key={index} className="mb-4">
+                <img
+                  src={item.thumbnail}
+                  alt="Video Thumbnail"
+                  className="w-full rounded-lg mb-2"
+                />
                 <button
                   onClick={() => downloadVideo(item.url)}
                   disabled={convertingVideo === item.url}
-                  style={{
-                    width: "100%",
-                    padding: "5px",
-                    marginTop: "5px",
-                    background: "#f0c14b",
-                    border: "1px solid #a88734",
-                    borderRadius: "3px",
-                    cursor: convertingVideo === item.url ? "not-allowed" : "pointer",
-                    fontSize: "14px",
-                  }}
-                >
-                  {convertingVideo === item.url ? "Converting..." : "Download Video"}
+                  className={`w-full py-2 rounded-lg font-medium ${convertingVideo === item.url ? "bg-gray-400" : "bg-[#f0c14b] text-[#111]"}`}>
+                  {convertingVideo === item.url
+                    ? "Converting..."
+                    : "Download Video"}
                 </button>
               </div>
             ))
           ) : (
-            <p style={{ fontSize: "14px", color: "#666" }}>No product videos found.</p>
+            <p className="text-gray-500">No product videos found.</p>
           )}
         </div>
       </div>
     </div>
-  );
+  )
 }
 
-export default IndexPopup;
+export default IndexPopup
