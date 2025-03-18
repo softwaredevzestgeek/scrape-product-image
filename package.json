@@ -6,11 +6,14 @@
   "author": "Plasmo Corp. <foss@plasmo.com>",
   "scripts": {
     "dev": "plasmo dev",
-    "build": "plasmo build",
+    "build": "plasmo build ",
     "package": "plasmo package"
   },
   "dependencies": {
-    "plasmo": "0.90.3",
+    "@ffmpeg/core": "^0.12.10",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "plasmo": "^0.90.3",
     "react": "18.2.0",
     "react-dom": "18.2.0"
   },
@@ -25,7 +28,39 @@
   },
   "manifest": {
     "host_permissions": [
-      "https://*/*"
-    ]
+      "<all_urls>"
+    ],
+    "permissions": [
+      "storage",
+      "downloads",
+      "activeTab",
+      "scripting",
+      "tabs",
+      "offscreen",
+      "system.display",
+      "unlimitedStorage",
+      "commands"
+    ],
+    "web_accessible_resources": [
+      {
+        "resources": [
+          "sandbox/sandbox.html",
+          "sandbox/sandbox.js",
+          "vendor/*"
+        ],
+        "matches": [
+          "<all_urls>"
+        ]
+      }
+    ],
+    "sandbox": {
+      "pages": [
+        "sandbox/sandbox.html"
+      ]
+    },
+    "content_security_policy": {
+      "sandbox": "sandbox allow-scripts allow-modals allow-popups; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; object-src 'self'; worker-src 'self' blob:;",
+      "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; media-src 'self' data: blob: *;"
+    }
   }
 }
