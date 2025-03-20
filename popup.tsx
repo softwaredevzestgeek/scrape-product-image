@@ -2,6 +2,8 @@ import { useEffect, useState } from "react"
 
 import "./style.css"
 
+import { Image } from "~components"
+
 function IndexPopup() {
   const [imageUrls, setImageUrls] = useState<string[]>([])
   const [videoUrls, setVideoUrls] = useState<
@@ -41,8 +43,6 @@ function IndexPopup() {
     }
   }, [])
 
-  console.log(imageUrls, videoUrls, "asdfasdfasdfasdf")
-
   const handleScrapeImages = async () => {
     setLoading(true)
     setError(null)
@@ -65,56 +65,61 @@ function IndexPopup() {
     }
   }
 
-  const downloadImage = (url: string, index: number) => {
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `amazon_image_${index + 1}.jpg`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  const downloadImage = async (url: string, index: number) => {
+    try {
+      // Fetch image using fetch API to bypass CORS
+      const response = await fetch(url, {
+        mode: "cors",
+        credentials: "omit"
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to download: ${response.status}`)
+      }
+
+      const blob = await response.blob()
+      const blobUrl = URL.createObjectURL(blob)
+
+      // Create download link
+      const link = document.createElement("a")
+      link.href = blobUrl
+      link.download = `amazon_image_${index + 1}.jpg`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      // Clean up
+      URL.revokeObjectURL(blobUrl)
+    } catch (err) {
+      setError(
+        `Failed to download image: ${err instanceof Error ? err.message : String(err)}`
+      )
+    }
   }
 
   const downloadVideo = async (url: string) => {
     setConvertingVideo(url)
     setError(null)
 
-    // chrome.tabs.create({
-    //   url: chrome.runtime.getURL(
-    //     `sandboxes/sandbox.html?m3u8Url=${url}&filename=${url}`
-    //   )
-    // })
+    chrome.windows.create(
+      {
+        url: chrome.runtime.getURL(
+          `sandboxes/sandbox.html?m3u8Url=${url}&filename=${url}`
+        ),
+        type: "popup",
+        state: "minimized"
+      },
+      function (createdWindow) {
+        const windowId = createdWindow.id
 
-    chrome.windows.create({
-      url: chrome.runtime.getURL(
-        `sandboxes/sandbox.html?m3u8Url=${url}&filename=${url}`
-      ),
-      type: "popup",
-      state: "minimized"
-    })
-
-    setConvertingVideo(null)
-
-    return
-
-    try {
-      const [tab] = await chrome.tabs.query({
-        active: true,
-        currentWindow: true
-      })
-      if (tab?.id)
-        chrome.runtime.sendMessage({
-          action: "triggerM3U8Download",
-          url,
-          filename: "converted_video.mp4"
+        chrome.windows.onRemoved.addListener(function (closedWindowId) {
+          if (closedWindowId === windowId) {
+            console.log("Popup window closed!")
+            setConvertingVideo(null)
+          }
         })
-      else setError("No active tab found")
-    } catch (error) {
-      setError(
-        "Failed to download video: " +
-          (error instanceof Error ? error.message : String(error))
-      )
-      setConvertingVideo(null)
-    }
+      }
+    )
   }
 
   return (
@@ -123,12 +128,6 @@ function IndexPopup() {
         🛒 Amazon Media Scraper
       </h1>
 
-      {/* <button
-        onClick={handleScrapeImages}
-        disabled={loading || convertingVideo !== null}
-        className="w-full bg-[#f0c14b] text-[#111] font-bold py-2 rounded-lg hover:bg-[#ddb347] transition disabled:opacity-50">
-        {loading ? "Scraping..." : "Scrape Product Media"}
-      </button> */}
       <button
         onClick={handleScrapeImages}
         disabled={loading || convertingVideo !== null}
@@ -156,7 +155,7 @@ function IndexPopup() {
                 <div
                   key={index}
                   className="flex flex-col items-center mb-4 p-3 rounded-lg bg-white shadow hover:shadow-md transition">
-                  <img
+                  <Image
                     src={url}
                     alt={`Amazon Image ${index + 1}`}
                     className="w-32 h-32 object-cover rounded-lg border border-gray-200 mb-2"
@@ -187,7 +186,7 @@ function IndexPopup() {
                 <div
                   key={index}
                   className="flex flex-col items-center mb-4 p-3 rounded-lg bg-white shadow hover:shadow-md transition">
-                  <img
+                  <Image
                     src={item.thumbnail}
                     alt="Video Thumbnail"
                     className="w-32 h-32 object-cover rounded-lg border border-gray-200 mb-2"
@@ -200,9 +199,7 @@ function IndexPopup() {
                         ? "bg-gray-400 text-white"
                         : "bg-[#f0c14b] text-[#111] hover:bg-[#ddb347]"
                     }`}>
-                    {convertingVideo === item.url
-                      ? "Converting..."
-                      : "Download"}
+                    {convertingVideo === item.url ? "Downloading" : "Download"}
                   </button>
                 </div>
               ))
