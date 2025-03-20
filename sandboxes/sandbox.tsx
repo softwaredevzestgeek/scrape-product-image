@@ -57,9 +57,12 @@ const Sandbox: React.FC = () => {
       const baseUrl = url.substring(0, url.lastIndexOf("/") + 1)
       let manifest = await fetchAndParseM3U8(url)
 
+      console.log(manifest, baseUrl, "baseUrlbaseUrlbaseUrl")
+
       if (manifest.playlists?.length) {
         updateStatus("Master playlist detected. Fetching sub-playlist...")
-        const subPlaylistUrl = baseUrl + manifest.playlists[0].uri
+        const lastItem = manifest.playlists.length - 1
+        const subPlaylistUrl = baseUrl + manifest.playlists[lastItem].uri
         manifest = await fetchAndParseM3U8(subPlaylistUrl)
       }
 
