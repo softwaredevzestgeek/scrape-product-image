@@ -127,7 +127,7 @@ function IndexPopup() {
   return (
     <div className="p-4 bg-white rounded-lg shadow-lg w-[620px] border border-gray-200">
       <h1 className="text-2xl font-semibold text-gray-800 text-center mb-6 mt-2">
-        🛒 Amazon Media Scraper
+        🛒 Amazon Media Extractor
       </h1>
 
       <button
@@ -136,7 +136,7 @@ function IndexPopup() {
         className="w-full py-2 rounded-lg font-bold text-[#111] transition disabled:opacity-50
                    bg-gradient-to-r from-[#f0c14b] to-[#ff9900]
                    hover:bg-gradient-to-r hover:from-[#e6b93e] hover:to-[#ff8c00]">
-        {loading ? "Scraping..." : "Scrape Product Media"}
+        {loading ? "Extracting..." : "Extract Product Media"}
       </button>
 
       {error && (
