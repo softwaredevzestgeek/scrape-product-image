@@ -6,6 +6,8 @@ function IndexPopup() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [convertingVideo, setConvertingVideo] = useState<string | null>(null);
+  const [conversionProgress, setConversionProgress] = useState<number>(0);
+
 
   useEffect(() => {
     // Listen for scraped data from content script
@@ -22,25 +24,28 @@ function IndexPopup() {
         setLoading(false);
       }
 
-      // Listen for conversion progress
       if (message.action === "conversionProgress") {
-        console.log(`Conversion Progress for ${message.url}: ${message.progress}%`);
+        console.log(`Conversion Progress: ${message.progress}%`);
+        setConversionProgress(message.progress);
       }
-
-      // Listen for conversion errors
-      if (message.action === "conversionError") {
-        console.error(`Conversion failed for ${message.url}: ${message.error}`);
-        setError(`Conversion failed for ${message.url}: ${message.error}`);
-        setConvertingVideo(null);
-      }
-
-      // Listen for successful conversion
+  
       if (message.action === "conversionComplete") {
-        console.log(`Conversion complete for ${message.url}`);
-        setConvertingVideo(null);
+        console.log("Conversion complete!");
+        setTimeout(() => {
+          setConvertingVideo(null);
+          setConversionProgress(0); // Reset progress after UI updates
+        }, 1000);
       }
+  
+      if (message.action === "conversionError") {
+        console.error(`Conversion failed: ${message.error}`);
+        setError(`Conversion failed: ${message.error}`);
+        setConvertingVideo(null);
+        setConversionProgress(0);
+      }
+
     });
-  }, []);
+  }, [convertingVideo]);
 
   const handleScrapeImages = async () => {
     setLoading(true);
@@ -184,8 +189,9 @@ function IndexPopup() {
                     fontSize: "14px",
                   }}
                 >
-                  {convertingVideo === item.url ? "Converting..." : "Download Video"}
+                  {convertingVideo === item.url ? `Converting... (${conversionProgress}%)` : "Download Video"}
                 </button>
+                
               </div>
             ))
           ) : (

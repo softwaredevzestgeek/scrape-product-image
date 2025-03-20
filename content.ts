@@ -1,60 +1,81 @@
-import FFmpegWrapper from './ffmpeg-wrapper';
+// Function to create and load the sandboxed iframe
+function createSandboxIframe() {
+  const sandbox = document.createElement("iframe");
+  sandbox.src = chrome.runtime.getURL("./sandbox/sandbox.html");
+  sandbox.style.display = "none";
+  document.body.appendChild(sandbox);
+  return sandbox;
+}
 
-const ffmpeg = new FFmpegWrapper(
-  chrome.runtime.getURL('./vendor/ffmpeg-core.js'),
-  chrome.runtime.getURL('./vendor/ffmpeg-core.wasm'),
-  chrome.runtime.getURL('./vendor/ffmpeg-core.worker.js')
-);
+// Function to send a message to the sandboxed iframe
+function sendMessageToSandbox(sandbox: HTMLIFrameElement, message: any) {
+  console.log("[Content Script] Sending message to sandbox:", message);
+  sandbox.contentWindow?.postMessage(message, "*");
+}
 
+// Function to request FFmpeg URLs from the background script
+async function requestFFmpegURLs() {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage({ action: "requestFFmpegURLs" }, (response) => {
+      if (chrome.runtime.lastError) {
+        reject(chrome.runtime.lastError);
+      } else {
+        resolve(response);
+      }
+    });
+  });
+}
+
+// Global reference to sandbox iframe
+let sandbox: HTMLIFrameElement | null = null;
+
+// Function to handle HLS conversion
 async function convertHLS(m3u8Url: string) {
   try {
     console.log("[Content Script] Starting HLS conversion for URL:", m3u8Url);
 
-    // Load FFmpeg
-    await ffmpeg.load();
+    // Create sandbox if it doesn't exist
+    if (!sandbox) {
+      sandbox = createSandboxIframe();
 
-    // Fetch the .m3u8 file
-    const response = await fetch(m3u8Url);
-    const arrayBuffer = await response.arrayBuffer();
-    const data = new Uint8Array(arrayBuffer);
+      // Wait for the iframe to load
+      await new Promise<void>((resolve) => {
+        sandbox.onload = () => {
+          console.log("[Content Script] Sandbox iframe loaded.");
+          resolve();
+        };
+      });
+    
 
-    // Write the file to FFmpeg's file system
-    await ffmpeg.writeFile('input.m3u8', data);
+      // Request FFmpeg URLs and send to sandbox
+      const ffmpegURLs = await requestFFmpegURLs();
+      sendMessageToSandbox(sandbox, ffmpegURLs);
+    }
 
-    // Convert to MP4
-    await ffmpeg.run(['-i', 'input.m3u8', 'output.mp4']);
-
-    // Read the converted file
-    const outputData = await ffmpeg.readFile('output.mp4');
-
-    // Create a Blob from the MP4 data
-    const blob = new Blob([outputData], { type: 'video/mp4' });
-
-    // Create a URL for the Blob
-    const blobUrl = URL.createObjectURL(blob);
-
-    // Trigger download
-    chrome.runtime.sendMessage({
-      action: "triggerDownload",
-      url: blobUrl,
-      filename: "converted_video.mp4",
-    });
-
-    // Clean up
-    URL.revokeObjectURL(blobUrl);
+    // Send conversion request to sandbox
+    sendMessageToSandbox(sandbox, { action: "convertHLS", url: m3u8Url });
   } catch (error) {
-    console.error("[Content Script] Conversion failed:", error);
-    chrome.runtime.sendMessage({
-      action: "conversionError",
-      error: error instanceof Error ? error.message : String(error),
-    });
+    console.error("[Content Script] Error during conversion:", error);
   }
 }
 
-// Message listener
-chrome.runtime.onMessage.addListener((message) => {
-  if (message.action === "convertHLS") {
-    convertHLS(message.url);
+// Listen for messages from the sandbox
+window.addEventListener("message", (event) => {
+  if (event.data.action === "conversionComplete") {
+    console.log("[Content Script] Conversion completed. Triggering download...");
+
+    chrome.runtime.sendMessage({
+      action: "triggerDownload",
+      url: event.data.blobUrl,
+      filename: "converted_video.mp4",
+    });
+
+    // Delay revoking the blob URL to ensure the download starts
+    setTimeout(() => {
+      URL.revokeObjectURL(event.data.blobUrl);
+    }, 5000); // 5-second delay
+  } else if (event.data.action === "conversionError") {
+    console.error("[Content Script] Conversion failed:", event.data.error);
   }
 });
 

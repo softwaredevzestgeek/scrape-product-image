@@ -1,100 +1,54 @@
-import { useEffect, useRef, useState } from "react";
+import { FFmpeg } from "@ffmpeg/ffmpeg";
+// import { type MessagePayload } from "~types";
 
+// Initialize FFmpeg once
+const ffmpeg = new FFmpeg();
+let initialized = false;
 
-
-export const getStyle = () => {
-  const style = document.createElement("style")
-  style.textContent = styleText
-  return style
+async function initializeFFmpeg() {
+  if (initialized) return;
+  
+  await ffmpeg.load({
+    coreURL: chrome.runtime.getURL("vendor/ffmpeg-core.js"),
+    wasmURL: chrome.runtime.getURL("vendor/ffmpeg-core.wasm"),
+    workerURL: chrome.runtime.getURL("vendor/ffmpeg-core.worker.js"),
+  });
+  initialized = true;
 }
 
-const DemoSand = () => {
-  const iframeRef = useRef(null);
-  const scriptLoaded = useRef(false);
-  const ffmpegInstance = useRef<any>(null);
-  const [editMode, setEditMode] = useState(false)
-  const triggerLoad = useRef(false)
-
-  const sendMessage = (message) => {
-    iframeRef.current.contentWindow.postMessage(message, "*");
-  };
-
-
-
-
-  const loadFfmpeg = async () => {
-    if (!scriptLoaded.current) return;
-    if (!triggerLoad.current) return;
-    if (ffmpegInstance.current) return;
+// Handle messages from content script
+window.addEventListener("message", async (event: MessageEvent<any>) => {
+  if (event.data.action === "CONVERT_HLS") {
     try {
-      const { createFFmpeg } = (window as any)?.FFmpeg;
+      await initializeFFmpeg();
+      const { url } = event.data.payload;
+      
+      // Fetch and process HLS
+      const response = await fetch(url);
+      const data = new Uint8Array(await response.arrayBuffer());
+      
+      await ffmpeg.writeFile("input.m3u8", data);
+      await ffmpeg.exec(["-i", "input.m3u8", "output.mp4"]);
+      
+      const outputData = await ffmpeg.readFile("output.mp4");
+      const blob = new Blob([outputData], { type: "video/mp4" });
 
-      if (!createFFmpeg) {
-        console.error("FFmpeg is not available");
-        return;
-      }
-
-      ffmpegInstance.current = createFFmpeg({
-        // log: true, // Enable logs for debugging
-        progress: (progress) => {
-          console.log("Progress:", progress);
-        },
-        corePath: "/vendor/ffmpeg-core.js", // Ensure this path is correct
-      });
-
-      console.log("Loading FFmpeg...");
-      await ffmpegInstance.current.load();
-      console.log("FFmpeg Loaded!", ffmpegInstance.current?.isLoaded());
-      sendMessage({ type: "ffmpeg-loaded" });
-      // Notify the parent (background or popup script) that FFmpeg is ready
-      // window.parent.postMessage({ type: "ready" }, "*");
+      // Send result back
+      window.parent.postMessage({
+        action: "CONVERSION_COMPLETE",
+        payload: { blob }
+      }, "*");
+      
     } catch (error) {
-      sendMessage({
-        type: "ffmpeg-load-error",
-        error: JSON.stringify(error),
-      });
-      console.error("Error loading FFmpeg:", error);
+      window.parent.postMessage({
+        action: "CONVERSION_ERROR",
+        payload: { error: error.message }
+      }, "*");
     }
-  };
+  }
+});
 
-  useEffect(() => {
-    //   Load FFmpeg script dynamically
-    document.body.style.margin = "0px";
-    document.body.style.padding = "0px";
-    const script = document.createElement("script");
-    script.src = "/vendor/ffmpeg.min.js";
-    script.async = true;
-
-    script.onload = () => {
-      scriptLoaded.current = true;
-      loadFfmpeg();
-    }
-
-    document.body.appendChild(script);
-  }, []);
-
-  return <>
-    <>
-      <div style={{ display: 'none'}} >
-        <iframe
-          ref={iframeRef}
-          src="../sandbox/sandbox.html"
-          allowFullScreen={true}
-          allow="clipboard-read; clipboard-write"
-          sandbox="allow-scripts allow-modals allow-popups allow-clipboard-write"
-          // sandbox="allow-scripts allow-same-origin allow-file-access-from-files allow-storage-access-by-user-activation"
-          style={{
-            width: "100%",
-            border: "none",
-            height: "100vh",
-            // position: "absolute",
-            top: 0,
-            left: 0,
-          }}
-        ></iframe>
-      </div>
-    </>
-  </>;
-};
-
-export default DemoSand;
+// Empty component - we just need the script
+export default function SandboxPage() {
+  return null;
+}
