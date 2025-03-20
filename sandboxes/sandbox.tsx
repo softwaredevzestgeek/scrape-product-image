@@ -1,3 +1,4 @@
+import JSZip from "jszip"
 import { Parser } from "m3u8-parser"
 import React, { useEffect, useRef, useState } from "react"
 
@@ -11,19 +12,25 @@ declare global {
 
 const Sandbox: React.FC = () => {
   const [status, setStatus] = useState<string>("Initializing...")
-  const [m3u8Url, setM3u8Url] = useState<string>("")
-  const [filename, setFilename] = useState<string>("")
+  const [m3u8Urls, setM3u8Urls] = useState<string[]>([])
+  const [filename, setFilename] = useState<string>("video")
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const completedDownloads = useRef<number>(0)
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
-    const m3u8UrlParam = urlParams.get("m3u8Url")
+    const m3u8UrlsParam = urlParams.getAll("m3u8Url")
     const filenameParam = urlParams.get("filename")
 
-    if (m3u8UrlParam && filenameParam) {
-      setM3u8Url(decodeURIComponent(m3u8UrlParam))
-      setFilename(decodeURIComponent(filenameParam))
-      processHLSVideo(decodeURIComponent(m3u8UrlParam))
+    if (m3u8UrlsParam.length > 0) {
+      setM3u8Urls(m3u8UrlsParam.map(decodeURIComponent))
+      setFilename(decodeURIComponent(filenameParam || "video"))
+
+      if (m3u8UrlsParam.length === 1) {
+        processSingleHLSVideo(m3u8UrlsParam[0])
+      } else {
+        processAllHLSVideos(m3u8UrlsParam.map(decodeURIComponent))
+      }
     } else {
       setStatus("Error: Missing required parameters.")
     }
@@ -52,7 +59,7 @@ const Sandbox: React.FC = () => {
     return parser.manifest
   }
 
-  const processHLSVideo = async (url: string) => {
+  const processHLSVideo = async (url: string, index: number) => {
     try {
       const baseUrl = url.substring(0, url.lastIndexOf("/") + 1)
       let manifest = await fetchAndParseM3U8(url)
@@ -73,8 +80,8 @@ const Sandbox: React.FC = () => {
       updateStatus(`Found ${segmentUrls.length} segments. Downloading...`)
 
       const segments = await Promise.all(
-        segmentUrls.map(async (url, index) => {
-          updateStatus(`Downloading segment ${index + 1}/${segmentUrls.length}`)
+        segmentUrls.map(async (url, i) => {
+          updateStatus(`Downloading segment ${i + 1}/${segmentUrls.length}`)
           const segmentResponse = await fetch(url)
           return await segmentResponse.arrayBuffer()
         })
@@ -94,7 +101,7 @@ const Sandbox: React.FC = () => {
       await ffmpeg.load()
 
       const concatFileContent = segments
-        .map((_, index) => `file 'segment_${index}.ts'`)
+        .map((_, i) => `file 'segment_${i}.ts'`)
         .join("\n")
 
       segments.forEach((segment, i) => {
@@ -112,22 +119,14 @@ const Sandbox: React.FC = () => {
         "concat.txt",
         "-c",
         "copy",
-        `${filename}.mp4`
+        `output.mp4`
       )
 
       updateStatus("FFMPEG processing complete!")
-      const outputData = ffmpeg.FS("readFile", `${filename}.mp4`)
+      const outputData = ffmpeg.FS("readFile", `output.mp4`)
       const blob = new Blob([outputData.buffer], { type: "video/mp4" })
-      // const downloadUrl = URL.createObjectURL(blob)
 
-      handleBlobDownload(blob, `${filename || "converted-video"}.mp4`)
-
-      // console.log(downloadUrl, outputData, "downloadUrldownloadUrldownloadUrl")
-
-      // const a = document.createElement("a")
-      // a.href = downloadUrl
-      // a.download = `${filename}.mp4`
-      // a.click()
+      return { blob, name: `${filename}/video_${index}.mp4` }
     } catch (error: any) {
       console.error("Error processing HLS video:", error)
       window.parent.postMessage(
@@ -138,6 +137,35 @@ const Sandbox: React.FC = () => {
         "*"
       )
       setStatus(`Error: ${error.message}`)
+      throw error
+    }
+  }
+
+  const processSingleHLSVideo = async (url: string) => {
+    try {
+      const { blob } = await processHLSVideo(url, 0)
+      handleBlobDownload(blob, `${filename}.mp4`)
+    } catch (error) {
+      console.error("Error processing video:", error)
+    }
+  }
+
+  const processAllHLSVideos = async (urls: string[]) => {
+    try {
+      const zip = new JSZip()
+      const folder = zip.folder(filename)!
+      const results = await Promise.all(
+        urls.map((url, index) => processHLSVideo(url, index))
+      )
+
+      results.forEach(({ blob, name }) => {
+        folder.file(name.split("/").pop()!, blob)
+      })
+
+      const zipBlob = await zip.generateAsync({ type: "blob" })
+      handleBlobDownload(zipBlob, `${filename}.zip`)
+    } catch (error) {
+      console.error("Error processing videos:", error)
     }
   }
 
@@ -149,10 +177,12 @@ const Sandbox: React.FC = () => {
           { type: "download-blob-file", blob, filename },
           "*"
         )
-
         window.addEventListener("message", (event) => {
           if (event.data.type === "download-complete") {
-            window.close()
+            completedDownloads.current++
+            if (completedDownloads.current === m3u8Urls.length) {
+              window.close()
+            }
           }
         })
       }

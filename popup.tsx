@@ -10,6 +10,7 @@ function IndexPopup() {
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const [convertingVideo, setConvertingVideo] = useState<string | null>(null)
+  const [isDownloadingAll, setIsDownloadingAll] = useState<boolean>(false)
 
   useEffect(() => {
     chrome.runtime.onMessage.addListener((message) => {
@@ -117,6 +118,40 @@ function IndexPopup() {
     }
   }
 
+  const downloadAllVideos = async () => {
+    if (videoUrls.length === 0) {
+      setError("No videos available to download.")
+      return
+    }
+
+    setIsDownloadingAll(true)
+    const queryParams = videoUrls
+      .map(
+        (item, index) =>
+          `m3u8Url=${encodeURIComponent(item.url)}&filename=${encodeURIComponent(index + "video")}`
+      )
+      .join("&")
+
+    chrome.windows.create(
+      {
+        url: chrome.runtime.getURL(`sandboxes/sandbox.html?${queryParams}`),
+        type: "popup",
+        state: "minimized"
+      },
+      function (createdWindow) {
+        const windowId = createdWindow.id
+
+        chrome.windows.onRemoved.addListener(function (closedWindowId) {
+          if (closedWindowId === windowId) {
+            console.log("Popup window closed!")
+            setIsDownloadingAll(false)
+            // Perform any actions you need here
+          }
+        })
+      }
+    )
+  }
+
   return (
     <div className="p-4 bg-white rounded-lg shadow-lg w-[620px] border border-gray-200">
       <h1 className="text-2xl font-semibold text-gray-800 text-center mb-6 mt-2">
@@ -178,9 +213,19 @@ function IndexPopup() {
 
         {/* Video Container */}
         <div className="flex-1 max-h-80 overflow-y-auto border rounded-lg bg-gray-50 shadow-inner">
-          <p className="text-lg font-medium mb-4 sticky top-0 px-4 py-2 bg-white backdrop-blur-md bg-opacity-75 border-b rounded-t-lg">
-            🎬 Videos
-          </p>
+          <div className="flex justify-between sticky top-0 mb-4 px-4 py-2 bg-white backdrop-blur-md bg-opacity-75 border-b rounded-t-lg">
+            <p className="text-lg font-medium">🎬 Videos</p>
+            <button
+              onClick={downloadAllVideos}
+              disabled={videoUrls.length === 0}
+              className={`text-xs px-4 rounded-lg font-semibold ${
+                videoUrls.length === 0
+                  ? " text-gray-400 cursor-not-allowed"
+                  : "text-black"
+              }`}>
+              ⬇️ Download All Videos
+            </button>
+          </div>
           <div className="grid grid-cols-2 gap-4 px-4">
             {videoUrls.length > 0 ? (
               videoUrls.map((item, index) => (
@@ -194,14 +239,14 @@ function IndexPopup() {
                   />
                   <button
                     onClick={() => downloadVideo(item.url)}
-                    disabled={convertingVideo === item.url}
+                    disabled={convertingVideo === item.url || isDownloadingAll}
                     className={`w-full py-2 rounded-lg font-medium transition ${
-                      convertingVideo === item.url
+                      convertingVideo === item.url || isDownloadingAll
                         ? "bg-gray-400 text-white"
                         : "bg-[#f0c14b] text-[#111] hover:bg-[#ddb347]"
                     }`}>
-                    {convertingVideo === item.url
-                      ? "Converting..."
+                    {convertingVideo === item.url || isDownloadingAll
+                      ? "Downloading..."
                       : "Download"}
                   </button>
                 </div>
