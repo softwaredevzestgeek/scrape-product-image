@@ -78,6 +78,12 @@ function IndexPopup() {
     setConvertingVideo(url)
     setError(null)
 
+    chrome.tabs.create({
+      url: chrome.runtime.getURL(
+        `sandboxes/sandbox.html?m3u8Url=${url}&filename=${url}`
+      )
+    })
+
     try {
       const [tab] = await chrome.tabs.query({
         active: true,

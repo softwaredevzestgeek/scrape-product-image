@@ -3480,6 +3480,7 @@ __metadata:
     autoprefixer: "npm:^10.4.21"
     axios: "npm:^1.8.3"
     m3u8-parser: "npm:^7.2.0"
+    mp4box: "npm:^0.5.4"
     plasmo: "npm:^0.90.3"
     postcss: "npm:^8.5.3"
     prettier: "npm:3.2.4"
@@ -6093,6 +6094,13 @@ __metadata:
   version: 3.2.7
   resolution: "mnemonic-id@npm:3.2.7"
   checksum: 10c0/cd63f9c30b02c2d6f057c4b587826e6a4a5815a265770e7ffe8d33f0abda4ae308aed1efbdcb3d85ff10f0ba7963c8a3fe568c60969889c1d4c57d20b51fecb5
+  languageName: node
+  linkType: hard
+
+"mp4box@npm:^0.5.4":
+  version: 0.5.4
+  resolution: "mp4box@npm:0.5.4"
+  checksum: 10c0/b3e5d8e32312321bb6d801642efe5d9fdb1e5ff3d059ae5fc3f54c7f159029c4ee941e4a0c9e18b122408411eec691a1d0e7c698bb207c433a754a9b2bac6604
   languageName: node
   linkType: hard
 

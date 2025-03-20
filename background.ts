@@ -14,7 +14,7 @@ const createOffscreenDocument = async () => {
     console.log("Creating offscreen document...")
     await chrome.offscreen.createDocument({
       url: "tabs/offscreen.html",
-      reasons: [chrome.offscreen.Reason.BLOBS],
+      reasons: [chrome.offscreen.Reason.IFRAME_SCRIPTING],
       justification: "To create Blob URLs for downloads"
     })
   }
@@ -80,6 +80,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // No need for URL.revokeObjectURL here
       }
     )
+  }
+  if (message.action === "videoProcessed") {
+    console.log("Received processed video data, triggering download")
+    // Use chrome.downloads API to download the file
+    chrome.downloads.download({
+      url: message.dataUrl,
+      filename: message.filename,
+      saveAs: true
+    })
   }
   return
 })
