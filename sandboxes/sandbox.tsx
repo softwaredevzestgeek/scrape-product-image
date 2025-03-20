@@ -149,6 +149,12 @@ const Sandbox: React.FC = () => {
           { type: "download-blob-file", blob, filename },
           "*"
         )
+
+        window.addEventListener("message", (event) => {
+          if (event.data.type === "download-complete") {
+            window.close()
+          }
+        })
       }
     }
   }

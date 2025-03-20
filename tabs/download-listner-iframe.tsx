@@ -16,6 +16,7 @@ const Sandbox: React.FC = () => {
           },
           () => {
             window.URL.revokeObjectURL(url)
+            window.parent.postMessage({ type: "download-complete" }, "*")
           }
         )
       }

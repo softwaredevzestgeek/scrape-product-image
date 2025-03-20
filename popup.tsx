@@ -78,11 +78,23 @@ function IndexPopup() {
     setConvertingVideo(url)
     setError(null)
 
-    chrome.tabs.create({
+    // chrome.tabs.create({
+    //   url: chrome.runtime.getURL(
+    //     `sandboxes/sandbox.html?m3u8Url=${url}&filename=${url}`
+    //   )
+    // })
+
+    chrome.windows.create({
       url: chrome.runtime.getURL(
         `sandboxes/sandbox.html?m3u8Url=${url}&filename=${url}`
-      )
+      ),
+      type: "popup",
+      state: "minimized"
     })
+
+    setConvertingVideo(null)
+
+    return
 
     try {
       const [tab] = await chrome.tabs.query({
