@@ -2,6 +2,8 @@ import { useEffect, useState } from "react"
 
 import "./style.css"
 
+import { Play } from "lucide-react"
+
 import { Image } from "~components"
 
 function IndexPopup() {
@@ -177,7 +179,7 @@ function IndexPopup() {
 
         {/* Video Container */}
         <div className="flex-1 max-h-80 overflow-y-auto border rounded-lg bg-gray-50 shadow-inner">
-          <p className="text-lg font-medium mb-4 sticky top-0 px-4 py-2 bg-white backdrop-blur-md bg-opacity-75 border-b rounded-t-lg">
+          <p className="z-50 text-lg font-medium mb-4 sticky top-0 px-4 py-2 bg-white backdrop-blur-md bg-opacity-75 border-b rounded-t-lg">
             🎬 Videos
           </p>
           <div className="grid grid-cols-2 gap-4 px-4">
@@ -186,11 +188,16 @@ function IndexPopup() {
                 <div
                   key={index}
                   className="flex flex-col items-center mb-4 p-3 rounded-lg bg-white shadow hover:shadow-md transition">
-                  <Image
-                    src={item.thumbnail}
-                    alt="Video Thumbnail"
-                    className="w-32 h-32 object-cover rounded-lg border border-gray-200 mb-2"
-                  />
+                  <div className="relative mb-2">
+                    <Image
+                      src={item.thumbnail}
+                      alt="Video Thumbnail"
+                      className="w-32 h-32 object-cover rounded-lg border border-gray-200"
+                    />
+                    <div className="absolute inset-0 bg-black opacity-50 rounded-lg" />
+                    <Play className="absolute inset-0 m-auto w-10 h-10 text-white opacity-80" />
+                  </div>
+
                   <button
                     onClick={() => downloadVideo(item.url)}
                     disabled={convertingVideo === item.url}

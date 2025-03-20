@@ -3479,6 +3479,7 @@ __metadata:
     "@types/react-dom": "npm:18.2.18"
     autoprefixer: "npm:^10.4.21"
     axios: "npm:^1.8.3"
+    lucide-react: "npm:^0.483.0"
     m3u8-parser: "npm:^7.2.0"
     mp4box: "npm:^0.5.4"
     plasmo: "npm:^0.90.3"
@@ -5827,6 +5828,15 @@ __metadata:
   dependencies:
     yallist: "npm:^4.0.0"
   checksum: 10c0/cb53e582785c48187d7a188d3379c181b5ca2a9c78d2bce3e7dee36f32761d1c42983da3fe12b55cb74e1779fa94cdc2e5367c028a9b35317184ede0c07a30a9
+  languageName: node
+  linkType: hard
+
+"lucide-react@npm:^0.483.0":
+  version: 0.483.0
+  resolution: "lucide-react@npm:0.483.0"
+  peerDependencies:
+    react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+  checksum: 10c0/de38ca2c57bcd65aedf750fa101ddcdc24e4a828ae4fa873299fb26a5dfc60ff65582a9cf7d8dfd2fbf8a6db18c69dfbfcf955b2320537da80f7193a4e967596
   languageName: node
   linkType: hard
 
