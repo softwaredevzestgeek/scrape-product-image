@@ -13,6 +13,7 @@
     "@ffmpeg/core": "^0.12.10",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
+    "lucide-react": "^0.483.0",
     "plasmo": "^0.90.3",
     "react": "18.2.0",
     "react-dom": "18.2.0"
@@ -57,15 +58,12 @@
         "sandbox/sandbox.html"
       ]
     },
-    "cross_origin_embedder_policy": {
-      "value": "require-corp"
-    },
     "cross_origin_opener_policy": {
       "value": "same-origin"
     },
     "content_security_policy": {
-      "sandbox": "sandbox allow-scripts allow-modals allow-popups; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; object-src 'self'; worker-src 'self' blob:;",
-      "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; media-src 'self' data: blob: *;"
-    }
+    "sandbox": "sandbox allow-scripts allow-modals allow-popups; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; object-src 'self'; worker-src 'self' blob:;",
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; media-src 'self' data: blob: *;"
+  }
   }
 }

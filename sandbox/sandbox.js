@@ -1,5 +1,6 @@
 let ffmpegInstance = null;
 
+
 // Request FFmpeg URLs from the content script
 window.parent.postMessage({ action: "requestFFmpegURLs" }, "*");
 
@@ -7,6 +8,9 @@ window.addEventListener("message", async (event) => {
   if (event.data.action === "ffmpegURLs") {
     const { ffmpegScriptURL, ffmpegCoreURL } = event.data;
     loadFfmpeg(ffmpegScriptURL, ffmpegCoreURL);
+  }
+  if (event.data.action === "conversionProgress") {
+    console.log(`[Sandbox] Progress Update: ${event.data.progress}%`);
   }
 });
 
@@ -36,6 +40,7 @@ async function loadFfmpeg(ffmpegScriptURL, ffmpegCoreURL) {
       log: true,
       corePath: ffmpegCoreURL,
       worker: true,
+      threads: 4
     });
 
     try {
@@ -122,24 +127,25 @@ async function fetchM3U8Segments(videoPlaylistUrl) {
     throw new Error("No .ts files found in video M3U8 file!");
   }
 
-  // Download and store .ts segments in FFmpeg memory
-  const tsFiles = [];
-  for (let i = 0; i < tsUrls.length; i++) {
-    console.log(`[Sandbox] Downloading segment: ${tsUrls[i]}`);
+  // Parallel download of .ts segments
+  const tsFiles = await Promise.all(
+    tsUrls.map(async (url, i) => {
+      console.log(`[Sandbox] Downloading segment: ${url}`);
 
-    const tsResponse = await fetch(tsUrls[i]);
-    if (!tsResponse.ok) throw new Error(`Failed to fetch segment: ${tsUrls[i]}`);
+      const tsResponse = await fetch(url);
+      if (!tsResponse.ok) throw new Error(`Failed to fetch segment: ${url}`);
 
-    const tsData = new Uint8Array(await tsResponse.arrayBuffer());
+      const tsData = new Uint8Array(await tsResponse.arrayBuffer());
+      const tsFileName = `segment${i}.ts`;
 
-    // Write the .ts file to FFmpeg’s in-memory file system
-    const tsFileName = `segment${i}.ts`;
-    ffmpegInstance.FS("writeFile", tsFileName, tsData);
-    tsFiles.push(tsFileName);
-  }
+      ffmpegInstance.FS("writeFile", tsFileName, tsData);
+      return tsFileName;
+    })
+  );
 
   return tsFiles;
 }
+
 
 
 
@@ -166,19 +172,35 @@ window.addEventListener("message", async (event) => {
 
       console.log("[Sandbox] Running FFmpeg conversion...");
 
+      ffmpegInstance.setLogger(({ type, message }) => {
+        if (type === "fferr") {
+          console.log(`[FFmpeg Log] ${message}`);
+      
+          const match = message.match(/frame=\s*(\d+)/);
+          if (match) {
+            const currentFrame = parseInt(match[1], 10);
+            const estimatedProgress = Math.min((currentFrame / 3000) * 100, 100); // Approximate total frames
+            console.log(`[Sandbox] Conversion Progress: ${estimatedProgress}%`);
+            window.parent.postMessage({ action: "conversionProgress", progress: Math.round(estimatedProgress) }, "*");
+          }
+        }
+      });
       
 
       await ffmpegInstance.run(
         "-f", "concat",
         "-safe", "0",
         "-i", "playlist.m3u8",
-        "-c:v", "libx264",
-        "-c:a", "aac",
-        "-strict", "experimental",
+        "-c", "copy",
         "output.mp4"
       );
 
       console.log("[Sandbox] Checking if output.mp4 exists...");
+
+      
+
+
+
       const files = ffmpegInstance.FS("readdir", "/");
       console.log("[Sandbox] FFmpeg FS Files:", files);
 

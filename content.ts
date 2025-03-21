@@ -3,6 +3,8 @@ function createSandboxIframe() {
   const sandbox = document.createElement("iframe");
   sandbox.src = chrome.runtime.getURL("./sandbox/sandbox.html");
   sandbox.style.display = "none";
+  sandbox.setAttribute("allow", "cross-origin-isolated");
+  sandbox.setAttribute("sandbox", "allow-scripts allow-modals allow-popups allow-clipboard-write");
   document.body.appendChild(sandbox);
   return sandbox;
 }
@@ -70,6 +72,8 @@ window.addEventListener("message", (event) => {
       filename: "converted_video.mp4",
     });
 
+    
+
     // Delay revoking the blob URL to ensure the download starts
     setTimeout(() => {
       URL.revokeObjectURL(event.data.blobUrl);
@@ -77,6 +81,7 @@ window.addEventListener("message", (event) => {
   } else if (event.data.action === "conversionError") {
     console.error("[Content Script] Conversion failed:", event.data.error);
   }
+  
 });
 
 // Scrape media data
@@ -127,8 +132,13 @@ function scrapeAndSendData() {
 }
 
 // Message listener
-chrome.runtime.onMessage.addListener((message) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "scrapeImages") {
+    const images = Array.from(document.querySelectorAll("img")).map((img) => img.src);
+    const videos = Array.from(document.querySelectorAll("video")).map((video) => ({
+      url: video.src,
+      thumbnail: video.poster || images[0], 
+    }));
     scrapeAndSendData();
   }
   if (message.action === "convertHLS") {
