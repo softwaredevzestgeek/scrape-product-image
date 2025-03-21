@@ -1,9 +1,8 @@
-import { signOut, type User } from "firebase/auth"
+import { type User } from "firebase/auth"
 import { Play } from "lucide-react"
 import React, { useEffect, useState } from "react"
 
 import { Image } from "~components"
-import { firebaseAuth } from "~firebase/config"
 
 interface MediaExtractorProps {
   user: User
@@ -127,31 +126,9 @@ export function MediaExtractor({ user }: MediaExtractorProps) {
     )
   }
 
-  const handleSignOut = async () => {
-    try {
-      await signOut(firebaseAuth)
-    } catch (error) {
-      setError(
-        `Sign out failed: ${error instanceof Error ? error.message : String(error)}`
-      )
-    }
-  }
-
   return (
     <div className="p-4">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600 truncate max-w-[150px]">
-            {user.email}
-          </span>
-          <button
-            onClick={handleSignOut}
-            className="text-xs py-1 px-2 bg-gray-200 hover:bg-gray-300 rounded-md transition">
-            Sign Out
-          </button>
-        </div>
-      </div>
-
+      <div className="flex justify-between items-center mb-6"></div>
       <button
         onClick={handleScrapeImages}
         disabled={loading || convertingVideo !== null}
