@@ -1,5 +1,7 @@
+import { saveAs } from "file-saver"
 import { type User } from "firebase/auth"
-import { Play } from "lucide-react"
+import JSZip from "jszip"
+import { Download, Play } from "lucide-react"
 import React, { useEffect, useState } from "react"
 
 import { Image } from "~components"
@@ -16,6 +18,7 @@ export function MediaExtractor({ user }: MediaExtractorProps) {
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const [convertingVideo, setConvertingVideo] = useState<string | null>(null)
+  const [downloadingAll, setDownloadingAll] = useState<boolean>(false)
 
   useEffect(() => {
     // Try to scrape images when component mounts
@@ -101,6 +104,59 @@ export function MediaExtractor({ user }: MediaExtractorProps) {
     }
   }
 
+  const downloadAllImages = async () => {
+    if (imageUrls.length === 0) {
+      setError("No images to download")
+      return
+    }
+
+    setDownloadingAll(true)
+    setError(null)
+
+    try {
+      // Create a new JSZip instance
+      const zip = new JSZip()
+      const folder = zip.folder("amazon_product_images")
+
+      // Download all images and add them to the zip
+      const imagePromises = imageUrls.map(async (url, index) => {
+        try {
+          const response = await fetch(url, {
+            mode: "cors",
+            credentials: "omit"
+          })
+
+          if (!response.ok) {
+            throw new Error(
+              `Failed to download image ${index + 1}: ${response.status}`
+            )
+          }
+
+          const blob = await response.blob()
+          folder.file(`amazon_image_${index + 1}.jpg`, blob)
+          return true
+        } catch (err) {
+          console.error(`Error downloading image ${index + 1}:`, err)
+          return false
+        }
+      })
+
+      await Promise.all(imagePromises)
+
+      // Generate the zip file
+      const zipContent = await zip.generateAsync({ type: "blob" })
+
+      // Save the zip file
+      saveAs(zipContent, "amazon_product_images.zip")
+    } catch (err) {
+      setError(
+        `Failed to download all images: ${err instanceof Error ? err.message : String(err)}`
+      )
+    } finally {
+      setDownloadingAll(false)
+    }
+  }
+
   const downloadVideo = async (url: string) => {
     setConvertingVideo(url)
     setError(null)
@@ -131,7 +187,7 @@ export function MediaExtractor({ user }: MediaExtractorProps) {
       <div className="flex justify-between items-center mb-6"></div>
       <button
         onClick={handleScrapeImages}
-        disabled={loading || convertingVideo !== null}
+        disabled={loading || convertingVideo !== null || downloadingAll}
         className="w-full py-2 rounded-lg font-bold text-[#111] transition disabled:opacity-50
                  bg-gradient-to-r from-[#f0c14b] to-[#ff9900]
                  hover:bg-gradient-to-r hover:from-[#e6b93e] hover:to-[#ff8c00]">
@@ -147,9 +203,20 @@ export function MediaExtractor({ user }: MediaExtractorProps) {
       <div className="mt-4 flex gap-6">
         {/* Image Container */}
         <div className="flex-1 max-h-80 overflow-y-auto border rounded-lg pt-0 bg-gray-50 shadow-inner">
-          <p className="text-lg font-medium mb-4 sticky top-0 px-4 py-2 bg-white backdrop-blur-md bg-opacity-75 border-b rounded-t-lg">
-            🖼️ Images
-          </p>
+          <div className="sticky top-0 px-4 py-2 bg-white backdrop-blur-md bg-opacity-75 border-b rounded-t-lg">
+            <div className="flex justify-between items-center">
+              <p className="text-lg font-medium">🖼️ Images</p>
+              {imageUrls.length > 0 && (
+                <button
+                  onClick={downloadAllImages}
+                  disabled={downloadingAll}
+                  className="flex items-center gap-1 py-1 px-3 bg-[#f0c14b] text-[#111] font-medium rounded-lg hover:bg-[#ddb347] transition disabled:opacity-50">
+                  <Download className="w-4 h-4" />
+                  {downloadingAll ? "Creating ZIP..." : "Download All"}
+                </button>
+              )}
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-4 px-4">
             {imageUrls.length > 0 ? (
               imageUrls.map((url, index) => (
@@ -163,7 +230,8 @@ export function MediaExtractor({ user }: MediaExtractorProps) {
                   />
                   <button
                     onClick={() => downloadImage(url, index)}
-                    className="w-full py-2 bg-[#f0c14b] text-[#111] font-medium rounded-lg hover:bg-[#ddb347] transition">
+                    disabled={downloadingAll}
+                    className="w-full py-2 bg-[#f0c14b] text-[#111] font-medium rounded-lg hover:bg-[#ddb347] transition disabled:opacity-50">
                     Download
                   </button>
                 </div>
@@ -199,12 +267,12 @@ export function MediaExtractor({ user }: MediaExtractorProps) {
 
                   <button
                     onClick={() => downloadVideo(item.url)}
-                    disabled={convertingVideo === item.url}
+                    disabled={convertingVideo === item.url || downloadingAll}
                     className={`w-full py-2 rounded-lg font-medium transition ${
                       convertingVideo === item.url
                         ? "bg-gray-400 text-white"
                         : "bg-[#f0c14b] text-[#111] hover:bg-[#ddb347]"
-                    }`}>
+                    } disabled:opacity-50`}>
                     {convertingVideo === item.url ? "Downloading" : "Download"}
                   </button>
                 </div>

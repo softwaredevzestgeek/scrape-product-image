@@ -15,7 +15,9 @@
     "@ffmpeg/util": "^0.12.2",
     "@types/m3u8-parser": "^7.2.0",
     "axios": "^1.8.3",
+    "file-saver": "^2.0.5",
     "firebase": "^11.5.0",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.483.0",
     "m3u8-parser": "^7.2.0",
     "mp4box": "^0.5.4",
@@ -26,6 +28,7 @@
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "4.1.1",
     "@types/chrome": "0.0.258",
+    "@types/file-saver": "^2",
     "@types/node": "20.11.5",
     "@types/react": "18.2.48",
     "@types/react-dom": "18.2.18",

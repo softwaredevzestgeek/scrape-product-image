@@ -6,6 +6,7 @@ import {
 import React, { useState } from "react"
 
 import { firebaseAuth } from "~firebase/config"
+import { getFirebaseErrorMessage } from "~utils/error"
 
 export function AuthScreen() {
   const [isSignUp, setIsSignUp] = useState<boolean>(false)
@@ -27,9 +28,8 @@ export function AuthScreen() {
         await signInWithEmailAndPassword(firebaseAuth, email, password)
       }
     } catch (error) {
-      setAuthError(
-        `${isSignUp ? "Sign up" : "Login"} failed: ${error instanceof Error ? error.message : String(error)}`
-      )
+      console.log("Auth error:", error)
+      setAuthError(getFirebaseErrorMessage(error, isSignUp))
     } finally {
       setAuthLoading(false)
     }
@@ -44,9 +44,7 @@ export function AuthScreen() {
       await sendPasswordResetEmail(firebaseAuth, email)
       setResetSuccess(`Password reset email sent to ${email}`)
     } catch (error) {
-      setAuthError(
-        `Password reset failed: ${error instanceof Error ? error.message : String(error)}`
-      )
+      setAuthError(getFirebaseErrorMessage(error))
     } finally {
       setAuthLoading(false)
     }
