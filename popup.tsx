@@ -211,7 +211,7 @@ function IndexPopup() {
                 </div>
               ))
             ) : (
-              <p className="text-gray-500 col-span-2 text-center">
+              <p className="text-gray-500 col-span-2 text-center mb-4">
                 No product videos found.
               </p>
             )}
