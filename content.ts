@@ -54,8 +54,6 @@ function scrapeAndSendData() {
       const jsonString = match[1].replace(/\\"/g, '"').replace(/\\/g, "")
       const obj = JSON.parse(jsonString)
 
-      console.log(obj?.videos, "videoDatavideoDatavideoData")
-
       const videoData =
         obj?.videos?.map((video) => ({
           url: video.url,
