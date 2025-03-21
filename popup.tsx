@@ -125,7 +125,7 @@ function IndexPopup() {
   }
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-lg w-[620px] border border-gray-200">
+    <div className="p-4 bg-white shadow-lg w-[620px] border border-gray-200">
       <h1 className="text-2xl font-semibold text-gray-800 text-center mb-6 mt-2">
         🛒 Amazon Media Extractor
       </h1>
